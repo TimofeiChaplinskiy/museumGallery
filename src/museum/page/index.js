@@ -1,5 +1,5 @@
 import React from 'react';
-import {getList} from '../api/index';
+import {getList, Search} from '../api/index';
 import AppBar from '@material-ui/core/AppBar';
 import Button from '@material-ui/core/Button';
 import CameraIcon from '@material-ui/icons/PhotoCamera';
@@ -16,6 +16,20 @@ import Container from '@material-ui/core/Container';
 import Link from '@material-ui/core/Link';
 import PropTypes from 'prop-types';
 import withStyles from '@material-ui/core/styles/withStyles';
+import SearchComponent from '../components/search'
+import IconButton from "@material-ui/core/IconButton";
+import MenuIcon from "@material-ui/core/SvgIcon/SvgIcon";
+import InputBase from "@material-ui/core/InputBase";
+import Divider from "@material-ui/core/Divider";
+import Paper from "@material-ui/core/Paper";
+import MenuIcons from '@material-ui/icons/Menu';
+import SearchIcon from '@material-ui/icons/Search';
+import DirectionsIcon from '@material-ui/icons/Directions';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@material-ui/core/Select';
+import Pagination from 'react-bootstrap/Pagination'
+
+
 const styles = theme => ({
     icon: {
         marginRight: theme.spacing(2),
@@ -47,20 +61,100 @@ const styles = theme => ({
         padding: theme.spacing(6),
     },
 });
-const cards = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 export class Museum extends React.Component{
 
     constructor(props){
         super(props)
+        this.state = {
+            list: null,
+            search: 0,
+            types: [
+                '',
+                'otherTerms',
+                'schilderij'
+            ],
+            currentType: '',
+            open: false,
+            count: null,
+            activePage: 1,
+            pageSize: 10
+        };
+
+        this.handleClose = this.handleClose.bind(this);
+        this.handleOpen = this.handleOpen.bind(this);
+    }
+
+    createPagination(count) {
+        const arr = [];
+        for(let i =0; i < count; i++) {
+            arr.push(i+1)
+        }
+        return arr;
     }
     componentDidMount() {
-        console.log(getList().then(data=>{debugger}));
+        console.log(getList().then(museum => {
+            this.setState({
+                list: museum.userSet.setItems,
+                count: this.createPagination(museum.userSet.count)
+            });
+            console.log(this.state)
+
+        }));
     }
+
+    handleChange(event) {
+        const { target } = event;
+        const value = target.type === 'checkbox' ? target.checked : target.value;
+        const { name } = target;
+        this.setState({
+            [ name ]: value,
+        });
+    }
+
+    handleClose() {
+        this.setState({
+            open: false,
+        });
+    }
+
+    handleOpen() {
+        this.setState({
+            open: true,
+        });
+    }
+
+    submitForm(e) {
+        e.preventDefault();
+
+        const {search, currentType, currentIndex, pageSize} = this.state;
+       console.log(this.state)
+        Search(search, currentType, currentIndex, pageSize)
+            .then((museum) => {
+                debugger
+                this.setState({
+                    list: museum.userSet.setItems
+                })
+            })
+    }
+
+    paginationChange(e) {
+        const currentIndex = Number(e.currentTarget.innerHTML);
+        const {search, currentType, pageSize} = this.state;
+        this.setState({activePage:  currentIndex});
+        Search(search, currentType, currentIndex, pageSize)
+            .then((museum) => {
+                debugger
+                this.setState({
+                    list: museum.userSet.setItems
+                })
+            })
+    }
+
 
     render() {
         const {classes}=this.props;
-
+        const {list, search, types, currentType, open, count, activePage}=this.state;
         return (
             <React.Fragment>
                     <CssBaseline />
@@ -73,47 +167,72 @@ export class Museum extends React.Component{
                         </Toolbar>
                     </AppBar>
                     <main>
+
+                        <form className={classes.form} onSubmit={ (e) => this.submitForm(e) }>
+                            <Paper className={classes.root}>
+                                <IconButton className={classes.iconButton} aria-label="menu">
+                                    <Select
+                                        open={open}
+                                        onClose={this.handleClose}
+                                        onOpen={this.handleOpen}
+                                        value={currentType}
+                                        onChange={ (e) => {
+                                            this.handleChange(e)
+                                        } }
+                                        name="type"
+                                        inputProps={{
+                                            name: 'currentType',
+                                            id: 'demo-controlled-open-select',
+                                        }}
+                                    >
+                                        {types && types.map((item, index) => (
+                                            <MenuItem key={index} name="currentType" value={item}>{item}</MenuItem>
+
+                                        ))}
+                                    </Select>
+                                </IconButton>
+                                <InputBase
+                                    className={classes.input}
+                                    placeholder="Search Google Maps"
+                                    inputProps={{ 'aria-label': 'search google maps' }}
+                                    value={ search }
+                                    name="search"
+                                    onChange={ (e) => {
+                                        this.handleChange(e)
+                                    } }
+                                />
+                                <IconButton className={classes.iconButton} aria-label="search">
+                                    <SearchIcon />
+                                </IconButton>
+                                <Divider className={classes.divider} orientation="vertical" />
+                                <Button color="primary"
+                                            type="submit"
+                                            className={classes.iconButton}
+                                            aria-label="directions">
+                                    <DirectionsIcon />
+                                </Button>
+                            </Paper>
+                        </form>
+
+
                         {/* Hero unit */}
-                        <div className={classes.heroContent}>
-                            <Container maxWidth="sm">
-                                <Typography component="h1" variant="h2" align="center" color="textPrimary" gutterBottom>
-                                    Album layout
-                                </Typography>
-                                <Typography variant="h5" align="center" color="textSecondary" paragraph>
-                                    Something short and leading about the collection below—its contents, the creator, etc.
-                                    Make it short and sweet, but not too short so folks don&apos;t simply skip over it
-                                    entirely.
-                                </Typography>
-                                <div className={classes.heroButtons}>
-                                    <Grid container spacing={2} justify="center">
-                                        <Grid item>
-                                            <Button variant="contained" color="primary">
-                                                Main call to action
-                                            </Button>
-                                        </Grid>
-                                        <Grid item>
-                                            <Button variant="outlined" color="primary">
-                                                Secondary action
-                                            </Button>
-                                        </Grid>
-                                    </Grid>
-                                </div>
-                            </Container>
-                        </div>
                         <Container className={classes.cardGrid} maxWidth="md">
                             {/* End hero unit */}
                             <Grid container spacing={4}>
-                                {cards.map(card => (
-                                    <Grid item key={card} xs={12} sm={6} md={4}>
+                                {list && list.map((card, index) => (
+                                    <Grid item key={index} xs={12} sm={6} md={4}>
                                         <Card className={classes.card}>
-                                            <CardMedia
-                                                className={classes.cardMedia}
-                                                image="https://source.unsplash.com/random"
-                                                title="Image title"
-                                            />
+                                            { card.image && card.image.cdnUrl &&
+                                                <CardMedia
+                                                    className={classes.cardMedia}
+                                                    image={card.image.cdnUrl}
+                                                    title={card.relationDescription}
+                                                />
+                                            }
+
                                             <CardContent className={classes.cardContent}>
                                                 <Typography gutterBottom variant="h5" component="h2">
-                                                    Heading
+                                                    {card.relationDescription}
                                                 </Typography>
                                                 <Typography>
                                                     This is a media card. You can use this section to describe the content.
@@ -132,6 +251,27 @@ export class Museum extends React.Component{
                                 ))}
                             </Grid>
                         </Container>
+                        {count &&
+                            <Pagination>
+                                <Pagination.First />
+                                <Pagination.Prev />
+                                {count.map((itm, index) =>(
+                                    <Pagination.Item key={index +1}
+                                     active={index + 1 === activePage}
+                                     onClick={ (e) => {
+                                         this.paginationChange(e)
+                                     } }
+                                    >
+                                        {index +1}
+                                    </Pagination.Item>
+                                ))
+
+                                }
+                                <Pagination.Next />
+                                <Pagination.Last />
+                            </Pagination>
+                        }
+
                     </main>
                     {/* Footer */}
                     <footer className={classes.footer}>
